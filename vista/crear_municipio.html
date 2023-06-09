@@ -1,17 +1,3 @@
-<?php
-require_once "../controlador/MunicipioController.php";
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nombre = $_POST['nombre'];
-    $fk_estado = $_POST['fk_estado'];
-
-    $municipioController = new MunicipioController();
-    $municipioController->crear($nombre, $fk_estado);
-
-    // Redirige a la página principal o a la lista de municipios
-    header("Location: indexmunicipio.php");
-} 
-?>
 <!DOCTYPE html>
 <html>
 <head>

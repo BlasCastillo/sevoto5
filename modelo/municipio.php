@@ -1,32 +1,12 @@
 <?php
-
 require_once "Estado.php";
 
-class Municipio {
-    private $id;
-    private $nombre;
+class Municipio extends Estado {
     private $fk_estado;
-    private $estado;
 
     public function __construct($id, $nombre, $fk_estado) {
-        $this->id = $id;
-        $this->nombre = $nombre;
-        $this->fk_estado = $fk_estado;    }
-
-    public function getId() {
-        return $this->id;
-    }
-
-    public function setId($id) {
-        $this->id = $id;
-    }
-
-    public function getNombre() {
-        return $this->nombre;
-    }
-
-    public function setNombre($nombre) {
-        $this->nombre = $nombre;
+        parent::__construct($id, $nombre);
+        $this->fk_estado = $fk_estado;
     }
 
     public function getFkEstado() {
@@ -37,63 +17,69 @@ class Municipio {
         $this->fk_estado = $fk_estado;
     }
 
-    public function getEstado() {
-        return $this->estado;
+    public function crear() {
+        global $pdo;
+        $stmt = $pdo->prepare("INSERT INTO municipio (nombre, fk_estado) VALUES (?, ?)");
+        $stmt->execute([$this->getNombre(), $this->getFkEstado()]);
+        $this->setId($pdo->lastInsertId());
     }
 
-    public function setEstado($estado) {
-        $this->estado = $estado;
+    public function editar() {
+        global $pdo;
+        $stmt = $pdo->prepare("UPDATE municipio SET nombre = ?, fk_estado = ? WHERE id = ?");
+        $stmt->execute([$this->getNombre(), $this->getFkEstado(), $this->getId()]);
     }
 
-    public function crear($conexion) {
-        $stmt = $conexion->prepare("INSERT INTO municipio (nombre, fk_estado) VALUES (?, ?)");
-        $stmt->bind_param("si", $this->nombre, $this->fk_estado);
+    public function eliminar() {
+        global $pdo;
+        $stmt = $pdo->prepare("DELETE FROM municipio WHERE id = ?");
+        $stmt->execute([$this->getId()]);
+    }
+
+    public static function mostrarTodos() {
+        global $pdo;
+        $stmt = $pdo->prepare("SELECT * FROM municipio");
         $stmt->execute();
-        $this->id = $conexion->insert_id;
-        $stmt->close();
-    }
-
-    public function editar($conexion) {
-        $stmt = $conexion->prepare("UPDATE municipio SET nombre = ?, fk_estado = ? WHERE id = ?");
-        $stmt->bind_param("sii", $this->nombre, $this->fk_estado, $this->id);
-        $stmt->execute();
-        $stmt->close();
-    }
-
-    public function eliminar($conexion) {
-        $stmt = $conexion->prepare("DELETE FROM municipio WHERE id = ?");
-        $stmt->bind_param("i", $this->id);
-        $stmt->execute();
-        $stmt->close();
-    }
-
-    public static function mostrarTodos($conexion) {
-        $stmt = $conexion->prepare("SELECT * FROM municipio");
-        $stmt->execute();
-        $result = $stmt->get_result();
         $municipios = [];
-        while ($row = $result->fetch_assoc()) {
+        while ($row = $stmt->fetch()) {
             $municipio = new Municipio($row['id'], $row['nombre'], $row['fk_estado']);
-            $municipio->setEstado(Estado::buscarPorId($conexion, $row['fk_estado']));
             $municipios[] = $municipio;
         }
-        $stmt->close();
         return $municipios;
     }
 
-    public static function buscarPorId($conexion, $id) {
-        $stmt = $conexion->prepare("SELECT * FROM municipio WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
-        $stmt->close();
+    public static function buscarPorId($id) {
+        global $pdo;
+        $stmt = $pdo->prepare("SELECT * FROM municipio WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
         if ($row) {
             $municipio = new Municipio($row['id'], $row['nombre'], $row['fk_estado']);
-            $municipio->setEstado(Estado::buscarPorId($conexion, $row['fk_estado']));
             return $municipio;
         } else {
             return null;
         }
     }
+
+    public function buscarPorEstado($fk_estado) {
+        global $pdo;
+        // Corregido el nombre de la tabla en la consulta SQL
+        $sql = "SELECT * FROM municipio WHERE fk_estado = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$fk_estado]);
+        $municipios = array();
+        while ($fila = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $municipio = new Municipio($fila['id'], $fila['nombre'], $fila['fk_estado']);
+            array_push($municipios, $municipio);
+        }
+        return $municipios;
+    }
+    
+    public function getEstadoNombre() {
+        $estado = Estado::buscarPorId($this->fk_estado);
+        return $estado->getNombre();
+    }
+    
+    
+    
 }
